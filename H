@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>محول التاريخ</title>
+    <!-- استدعاء مكتبات التحويل الدقيقة -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment-hijri/2.1.2/moment-hijri.min.js"></script>
+    <style>
+        body { font-family: system-ui, sans-serif; display: flex; gap: 20px; padding: 20px; background: #f4f4f9; margin: 0; flex-wrap: wrap; }
+        .main { flex: 2; min-width: 300px; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .sidebar { flex: 1; min-width: 250px; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); height: fit-content; max-height: 80vh; overflow-y: auto; }
+        .row { display: flex; gap: 10px; align-items: center; margin-bottom: 25px; flex-wrap: wrap; }
+        .input-group { display: flex; gap: 5px; align-items: center; direction: ltr; } /* LTR للحفاظ على ترتيب الإدخال المنطقي */
+        input { width: 60px; padding: 8px; text-align: center; border: 1px solid #ccc; border-radius: 4px; font-size: 16px; }
+        input.year { width: 80px; }
+        button { padding: 8px 20px; background: #0056b3; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; }
+        button:hover { background: #004494; }
+        .result { font-weight: bold; color: #1a73e8; font-size: 18px; direction: ltr; }
+        .history-item { padding: 10px 0; border-bottom: 1px solid #eee; font-size: 14px; direction: ltr; text-align: right; }
+        h2, h3 { margin-top: 0; color: #333; }
+        hr { border: 0; border-top: 1px solid #eee; margin: 20px 0; }
+    </style>
+</head>
+<body>
+    <div class="main">
+        <h2>محول التاريخ</h2>
+
+        <!-- هجري إلى ميلادي -->
+        <h3>من هجري إلى ميلادي (النتيجة: MM/DD/YYYY)</h3>
+        <div class="row">
+            <div class="input-group">
+                <input type="number" id="h-y" class="year" placeholder="YYYY" tabindex="3" max="1500">
+                <span>/</span>
+                <input type="number" id="h-m" placeholder="MM" tabindex="2" max="12">
+                <span>/</span>
+                <input type="number" id="h-d" placeholder="DD" tabindex="1" max="30">
+            </div>
+            <button onclick="hToG()" tabindex="4">تحويل</button>
+            <div class="result" id="res-g"></div>
+        </div>
+
+        <hr>
+
+        <!-- ميلادي إلى هجري -->
+        <h3>من ميلادي إلى هجري (الادخال الأمريكي: MM/DD/YYYY)</h3>
+        <div class="row">
+            <div class="input-group">
+                <input type="number" id="g-y" class="year" placeholder="YYYY" tabindex="7" max="2100">
+                <span>/</span>
+                <input type="number" id="g-d" placeholder="DD" tabindex="6" max="31">
+                <span>/</span>
+                <input type="number" id="g-m" placeholder="MM" tabindex="5" max="12">
+            </div>
+            <button onclick="gToH()" tabindex="8">تحويل</button>
+            <div class="result" id="res-h"></div>
+        </div>
+    </div>
+
+    <!-- الحافظة الجانبية -->
+    <div class="sidebar">
+        <h3>سجل التحويلات (محلي)</h3>
+        <button onclick="clearHistory()" style="background:#dc3545; padding: 4px 8px; font-size: 12px; margin-bottom: 10px;">مسح السجل</button>
+        <div id="history-list"></div>
+    </div>
+
+    <script>
+        const HISTORY_KEY = 'dateConversionHistory';
+
+        function saveHistory(text) {
+            let history = JSON.parse(localStorage.getItem(HISTORY_KEY)) || [];
+            history.unshift(text); // الإضافة في البداية
+            if (history.length > 20) history.pop(); // الاحتفاظ بآخر 20 تحويل فقط
+            localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+            renderHistory();
+        }
+
+        function renderHistory() {
+            const list = document.getElementById('history-list');
+            const history = JSON.parse(localStorage.getItem(HISTORY_KEY)) || [];
+            if(history.length === 0) {
+                list.innerHTML = '<div style="color:#777;text-align:right;">لا توجد تحويلات سابقة.</div>';
+                return;
+            }
+            list.innerHTML = history.map(item => `<div class="history-item">${item}</div>`).join('');
+        }
+
+        function clearHistory() {
+            localStorage.removeItem(HISTORY_KEY);
+            renderHistory();
+        }
+
+        function hToG() {
+            const d = document.getElementById('h-d').value;
+            const m = document.getElementById('h-m').value;
+            const y = document.getElementById('h-y').value;
+            if (!d || !m || !y) return alert('يرجى تعبئة جميع الحقول');
+
+            const mDate = moment(`${y}/${m}/${d}`, 'iYYYY/iM/iD');
+            if (!mDate.isValid()) return alert('تاريخ هجري غير صحيح');
+
+            const result = mDate.format('MM/DD/YYYY'); // تنسيق أمريكي
+            document.getElementById('res-g').innerText = result;
+            saveHistory(`H: ${y}/${m}/${d} ➔ G: ${result}`);
+        }
+
+        function gToH() {
+            const m = document.getElementById('g-m').value;
+            const d = document.getElementById('g-d').value;
+            const y = document.getElementById('g-y').value;
+            if (!d || !m || !y) return alert('يرجى تعبئة جميع الحقول');
+
+            const mDate = moment(`${y}/${m}/${d}`, 'YYYY/M/D');
+            if (!mDate.isValid()) return alert('تاريخ ميلادي غير صحيح');
+
+            const result = mDate.format('iYYYY/iMM/iDD');
+            document.getElementById('res-h').innerText = result;
+            saveHistory(`G: ${m}/${d}/${y} ➔ H: ${result}`);
+        }
+
+        // تحسين تجربة المستخدم: الانتقال للخانة التالية تلقائياً عند اكتمال الرقم
+        document.querySelectorAll('input').forEach(input => {
+            input.addEventListener('input', function() {
+                const maxLen = this.classList.contains('year') ? 4 : 2;
+                if (this.value.length >= maxLen) {
+                    // الاعتماد على ترتيب الـ tabindex للانتقال الصحيح
+                    const currentTab = parseInt(this.getAttribute('tabindex'));
+                    const nextEl = document.querySelector(`[tabindex="${currentTab + 1}"]`);
+                    if (nextEl) nextEl.focus();
+                }
+            });
+            // السماح بالتنفيذ عند الضغط على Enter
+            input.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    if (this.id.startsWith('h-')) hToG();
+                    if (this.id.startsWith('g-')) gToH();
+                }
+            });
+        });
+
+        // تهيئة السجل عند تحميل الصفحة
+        renderHistory();
+    </script>
+</body>
+</html>
